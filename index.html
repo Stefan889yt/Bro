@@ -1,6 +1,231 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STEF Investments</title>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+<style>
+body{
+    background:#0f172a;
+    color:white;
+    font-family:Arial, sans-serif;
+    text-align:center;
+    padding:30px;
+}
+
+.card{
+    background:#1e293b;
+    max-width:700px;
+    margin:auto;
+    padding:20px;
+    border-radius:15px;
+}
+
+button{
+    padding:12px 24px;
+    font-size:18px;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+}
+
+input{
+    width:90%;
+    padding:10px;
+    margin:5px;
+}
+
+h1{
+    color:gold;
+}
+
+#balance{
+    font-size:32px;
+    color:#22c55e;
+}
+</style>
+</head>
+
 <body>
-<h1>STEF Investments 🚀</h1>
+
+<div class="card">
+
+<h1>🚀 STEF Investments</h1>
+
+<button onclick="connectWallet()">
+Connect Rabby
+</button>
+
+<hr>
+
+<h3>Wallet</h3>
+<p id="wallet">Not connected</p>
+
+<h3>Balance</h3>
+<p id="balance">0 STEF</p>
+
+<h3>Transfer STEF</h3>
+
+<input
+id="receiver"
+placeholder="Wallet Address"
+/>
+
+<input
+id="amount"
+placeholder="Amount (ex: 100)"
+/>
+
+<br><br>
+
+<button onclick="sendSTEF()">
+Send STEF
+</button>
+
+<p id="status"></p>
+
+</div>
+
+<script>
+
+const CONTRACT_ADDRESS =
+"0x18A33cDb13a5445a3c4F1dF22407fe189f1a9CCE";
+
+const ABI = [
+"function balanceOf(address owner) view returns (uint256)",
+"function transfer(address to,uint256 amount) returns (bool)"
+];
+
+let provider;
+let signer;
+let contract;
+let currentUser;
+
+async function connectWallet(){
+
+    try{
+
+        if(!window.ethereum){
+            alert("Rabby sau MetaMask nu este detectat.");
+            return;
+        }
+
+        provider =
+        new ethers.providers.Web3Provider(window.ethereum);
+
+        await provider.send(
+            "eth_requestAccounts",
+            []
+        );
+
+        signer = provider.getSigner();
+
+        currentUser =
+        await signer.getAddress();
+
+        document.getElementById(
+            "wallet"
+        ).innerText = currentUser;
+
+        contract =
+        new ethers.Contract(
+            CONTRACT_ADDRESS,
+            ABI,
+            provider
+        );
+
+        updateBalance();
+
+    }catch(err){
+
+        console.error(err);
+
+        alert(err.message);
+
+    }
+}
+
+async function updateBalance(){
+
+    const balance =
+    await contract.balanceOf(currentUser);
+
+    const formatted =
+    ethers.utils.formatUnits(
+        balance,
+        18
+    );
+
+    document.getElementById(
+        "balance"
+    ).innerText =
+    formatted + " STEF";
+}
+
+async function sendSTEF(){
+
+    try{
+
+        if(!signer){
+
+            alert(
+                "Connect wallet first"
+            );
+
+            return;
+        }
+
+        const to =
+        document.getElementById(
+            "receiver"
+        ).value;
+
+        const amount =
+        document.getElementById(
+            "amount"
+        ).value;
+
+        const contractWithSigner =
+        contract.connect(signer);
+
+        const tx =
+        await contractWithSigner.transfer(
+            to,
+            ethers.utils.parseUnits(
+                amount,
+                18
+            )
+        );
+
+        document.getElementById(
+            "status"
+        ).innerText =
+        "Waiting for confirmation...";
+
+        await tx.wait();
+
+        document.getElementById(
+            "status"
+        ).innerText =
+        "Transfer completed!";
+
+        updateBalance();
+
+    }catch(err){
+
+        console.error(err);
+
+        document.getElementById(
+            "status"
+        ).innerText =
+        err.message;
+    }
+}
+
+</script>
+
 </body>
 </html>
